@@ -1,0 +1,96 @@
+var data = File.ReadAllLines("example.txt");
+//data = File.ReadAllLines("input.txt");
+
+var total = data.Sum(x => GetCombinations(x));
+Console.WriteLine(total);
+Console.ReadLine();
+
+total = data.Sum(x => GetCombinations(x, unfolded: true));
+Console.WriteLine(total);
+
+
+
+int GetCombinations(string x, bool unfolded = false)
+{
+    Console.WriteLine("Processing: " + x);
+    var pattern = x.Split(' ')[0];
+    var numbers = x.Split(" ")[1].Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(x => int.Parse(x)).ToArray();
+
+    if (unfolded)
+    {
+        var m = new[] { 0, 1, 2, 3, 4 };
+        pattern = string.Join('?', m.Select(x => pattern));
+        numbers = m.SelectMany(x => numbers).ToArray();
+    }
+    while (pattern.Contains("..")) pattern = pattern.Replace("..", ".");
+
+    var res = 0;
+
+    var n = numbers.Length;
+    var positions = new int[n+1];
+    positions[0] = 0;
+    FillPositionsFrom(positions, numbers, 1);
+    positions[n] = pattern.Length + 1; // artificially add ".#"
+
+    do
+    {
+        if (Match(positions, numbers, pattern)) res++;
+    } while (Moved(positions, numbers));
+
+    Console.WriteLine("\tFound number: " + res);
+
+    return res;
+}
+
+void FillPositionsFrom(int[] positions, int[] numbers, int start)
+{
+    for (int i = start; i < numbers.Length; i++)
+    {
+        positions[i] = positions[i - 1] + numbers[i - 1] + 1;
+    }
+}
+
+bool Match(int[] positions, int[] numbers, string pattern)
+{
+    var poss = "";
+    int x = 0;
+    for (int i = 0; i < numbers.Length; i++)
+    {
+        while (x < positions[i])
+        {
+            poss += ".";
+            x++;
+        }
+        for (int j = 0; j < numbers[i]; j++)
+        {
+            poss += "#";
+            x++;
+        }
+    }
+    while (x < pattern.Length)
+    {
+        poss += ".";
+        x++;
+    }
+
+    for (int i = 0; i < pattern.Length; i++)
+    {
+        if (pattern[i] != '?' && pattern[i] != poss[i])
+            return false;
+    }
+    //Console.WriteLine("\tFound: " + poss);
+    return true;
+}
+
+bool Moved(int[] positions, int[] numbers)
+{
+    var toM = numbers.Length-1;
+    while (toM >= 0 && positions[toM] + numbers[toM] + 1 == positions[toM + 1])
+        toM--;
+    if (toM < 0) return false;
+
+    positions[toM] = positions[toM]+1;
+    FillPositionsFrom(positions, numbers, toM + 1);
+    return true;
+}
